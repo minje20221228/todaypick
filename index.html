@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>오늘 뭐하지?</title>
+  <link rel="stylesheet" href="./css/style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <button class="brand" id="goHomeBtn" type="button">
+        <span class="newLogo" aria-hidden="true">
+          <span class="logoBubble">오늘</span>
+          <span class="logoSpark">?</span>
+        </span>
+        <span>
+          <strong>오늘 뭐하지?</strong>
+          <small>AI Pick Place</small>
+        </span>
+      </button>
+
+      <nav class="topActions">
+        <button class="ghostBtn" id="showFavoritesBtn" type="button">찜</button>
+        <button class="ghostBtn" id="showCommunityBtn" type="button">커뮤니티</button>
+        <a class="ghostBtn" href="./guide.html">가이드</a>
+        <a class="ghostBtn hidden" id="adminLink" href="./admin.html">관리자</a>
+        <button class="ghostBtn" id="loginOpenBtn" type="button">로그인</button>
+        <button class="ghostBtn hidden" id="logoutBtn" type="button">로그아웃</button>
+        <button class="themeBtn" id="themeToggle" type="button">🌙</button>
+      </nav>
+    </header>
+
+    <main id="listPage">
+      <section class="simpleHero regionHero" id="regionFirstPanel">
+        <div>
+          <p class="eyebrow">STEP 1 · REGION</p>
+          <h1>어디에서<br />놀까요?</h1>
+          <p class="heroSub">먼저 지역을 선택하면 그 지역 안에서 AI가 더 정확하게 추천해드려요.</p>
+        </div>
+        <div class="regionSelectBox">
+          <button class="regionAllBtn" id="allRegionBtn" type="button">전국 전체 보기</button>
+          <div class="regionGrid" id="regionButtons"></div>
+        </div>
+      </section>
+
+      <section class="quizPanel" id="aiQuizPanel">
+        <div class="quizHead">
+          <span id="aiStepText">AI 질문 1/3</span>
+          <button class="ghostBtn smallBtn" id="aiRestartBtn" type="button">처음부터</button>
+        </div>
+        <h2 id="aiQuestionTitle">누구랑 가나요?</h2>
+        <div class="quizOptions" id="aiOptions"></div>
+        <p class="selectedRegionText" id="selectedRegionText">선택 지역: 전국</p>
+      </section>
+
+      <section class="aiPanel hidden" id="aiResultPanel">
+        <div>
+          <h2 id="aiTitle">AI 추천 결과</h2>
+          <p id="aiReason">조건에 맞는 장소를 골랐어요.</p>
+        </div>
+        <button class="ghostBtn" id="clearAiBtn" type="button">전체 보기</button>
+      </section>
+
+      <section class="filterToggle">
+        <button class="ghostBtn" id="toggleFiltersBtn" type="button">상세 필터 열기</button>
+      </section>
+
+      <section class="panel hidden" id="searchPanel">
+        <div class="searchRow">
+          <label class="searchBox" for="searchInput">
+            <span>🔍</span>
+            <input id="searchInput" type="search" placeholder="장소명, 지역, 키워드 검색" autocomplete="off" />
+          </label>
+          <button class="primaryBtn" id="resetBtn" type="button">초기화</button>
+        </div>
+
+        <div class="filterGrid">
+          <select id="regionFilter"></select>
+          <select id="categoryFilter"></select>
+          <select id="companionFilter"></select>
+          <select id="budgetFilter"></select>
+          <select id="moodFilter"></select>
+          <select id="indoorFilter"></select>
+        </div>
+      </section>
+
+
+      <section class="editorNote">
+        <h2>오늘 뭐하지?는 이렇게 추천해요</h2>
+        <p>단순히 유명한 장소만 보여주지 않고, 실제로 방문할 때 필요한 조건을 함께 정리합니다. 추천 방문 시간, 혼잡도, 예산, 동행 유형, 비 오는 날 대체 코스까지 확인하고 오늘의 일정을 골라보세요.</p>
+      </section>
+
+      <section class="sectionHead">
+        <h2 id="sectionTitle">추천 장소</h2>
+        <strong id="resultCount">0개</strong>
+      </section>
+
+      <section class="cards" id="cardsArea"></section>
+      <p class="empty hidden" id="emptyState">조건에 맞는 장소가 없어요.</p>
+    </main>
+
+    <main class="hidden" id="detailPage"></main>
+
+    <main class="community hidden" id="communityPage">
+
+      <section class="editorNote">
+        <h2>오늘 뭐하지?는 이렇게 추천해요</h2>
+        <p>단순히 유명한 장소만 보여주지 않고, 실제로 방문할 때 필요한 조건을 함께 정리합니다. 추천 방문 시간, 혼잡도, 예산, 동행 유형, 비 오는 날 대체 코스까지 확인하고 오늘의 일정을 골라보세요.</p>
+      </section>
+
+      <section class="sectionHead">
+        <h2>커뮤니티 추천</h2>
+        <button class="primaryBtn" id="writePostBtn" type="button">추천글 작성</button>
+      </section>
+      <div class="notice" id="communityNotice"></div>
+      <section class="postList" id="postList"></section>
+    </main>
+  </div>
+
+  <dialog class="modal" id="authModal">
+    <form class="modalCard" id="authForm" method="dialog">
+      <button class="closeBtn" id="authCloseBtn" type="button">×</button>
+      <h2 id="authTitle">로그인</h2>
+
+      <label>
+        아이디
+        <input id="usernameInput" type="text" minlength="4" maxlength="16" required placeholder="영문 소문자/숫자/밑줄 4~16자" autocomplete="username" />
+      </label>
+
+      <label id="emailLabel">
+        이메일
+        <div class="inlineInput">
+          <input id="emailInput" type="email" maxlength="80" placeholder="you@example.com" autocomplete="email" />
+          <button class="ghostBtn" id="sendEmailCodeBtn" type="button">인증</button>
+        </div>
+      </label>
+
+      <label id="emailCodeLabel" class="hidden codeReveal">
+        이메일 인증코드
+        <input id="emailCodeInput" type="text" maxlength="6" placeholder="6자리 코드" />
+      </label>
+
+      <label id="nicknameLabel">
+        닉네임
+        <input id="nicknameInput" type="text" minlength="2" maxlength="12" placeholder="한글/영문/숫자 2~12자" autocomplete="nickname" />
+      </label>
+
+      <label>
+        비밀번호
+        <input id="passwordInput" type="password" minlength="8" maxlength="72" required placeholder="영문+숫자 8자 이상" autocomplete="current-password" />
+      </label>
+
+      <div class="authCheckList" id="authCheckList"></div>
+      <p class="formMessage" id="authMessage"></p>
+
+      <button class="primaryBtn full" id="authSubmitBtn" type="submit">로그인</button>
+      <button class="linkBtn" id="authSwitchBtn" type="button">회원가입으로 전환</button>
+    </form>
+  </dialog>
+
+  <dialog class="modal" id="postModal">
+    <form class="modalCard" id="postForm" method="dialog">
+      <button class="closeBtn" id="postCloseBtn" type="button">×</button>
+      <h2>장소 추천하기</h2>
+      <label>지역<select id="postRegion" required></select></label>
+      <label>카테고리<select id="postCategory" required></select></label>
+      <label>장소명<input id="postPlaceName" type="text" minlength="2" maxlength="40" required /></label>
+      <label>제목<input id="postTitle" type="text" minlength="2" maxlength="60" required /></label>
+      <label>내용<textarea id="postContent" minlength="10" maxlength="500" required></textarea></label>
+      <label>평점<select id="postRating" required>
+        <option value="5">★★★★★ 5점</option><option value="4">★★★★☆ 4점</option><option value="3">★★★☆☆ 3점</option><option value="2">★★☆☆☆ 2점</option><option value="1">★☆☆☆☆ 1점</option>
+      </select></label>
+      <p class="formMessage" id="postMessage"></p>
+      <button class="primaryBtn full" type="submit">등록</button>
+    </form>
+  </dialog>
+
+  <dialog class="modal" id="reviewModal">
+    <form class="modalCard" id="reviewForm" method="dialog">
+      <button class="closeBtn" id="reviewCloseBtn" type="button">×</button>
+      <h2 id="reviewTitle">리뷰</h2>
+      <div id="reviewList" class="reviewList"></div>
+      <label>별점<select id="reviewRating">
+        <option value="5">★★★★★ 5점</option><option value="4">★★★★☆ 4점</option><option value="3">★★★☆☆ 3점</option><option value="2">★★☆☆☆ 2점</option><option value="1">★☆☆☆☆ 1점</option>
+      </select></label>
+      <label>리뷰<textarea id="reviewContent" minlength="5" maxlength="300" placeholder="5자 이상 작성"></textarea></label>
+      <p class="formMessage" id="reviewMessage"></p>
+      <button class="primaryBtn full" type="submit">리뷰 저장</button>
+    </form>
+  </dialog>
+
+  <dialog class="modal" id="reportModal">
+    <form class="modalCard" id="reportForm" method="dialog">
+      <button class="closeBtn" id="reportCloseBtn" type="button">×</button>
+      <h2>신고하기</h2>
+      <label>사유<select id="reportReason"><option>스팸/홍보</option><option>부적절한 내용</option><option>허위 정보</option><option>욕설/비방</option><option>기타</option></select></label>
+      <label>상세<textarea id="reportDetails" maxlength="300"></textarea></label>
+      <p class="formMessage" id="reportMessage"></p>
+      <button class="primaryBtn full" type="submit">신고</button>
+    </form>
+  </dialog>
+
+
+  <footer class="siteFooter">
+    <div>
+      <strong>오늘 뭐하지?</strong>
+      <p>지역별 추천, AI 질문 추천, 리뷰를 통해 오늘 갈 곳을 쉽게 찾는 장소 추천 서비스입니다.</p>
+    </div>
+    <nav>
+      <a href="./about.html">소개</a>
+      <a href="./guide.html">이용 가이드</a>
+      <a href="./privacy.html">개인정보처리방침</a>
+      <a href="./terms.html">이용약관</a>
+      <a href="./contact.html">문의</a>
+    </nav>
+  </footer>
+
+
+  <script src="./js/data.js"></script>
+  <script src="./js/api.js"></script>
+  <script src="./js/app.js"></script>
+</body>
+</html>
