@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>오늘 뭐하지? 관리자</title>
+  <link rel="stylesheet" href="./css/style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <a class="brand" href="./index.html">
+        <span class="newLogo adminLogo" aria-hidden="true">
+          <span class="logoBubble">관리</span>
+          <span class="logoSpark">!</span>
+        </span>
+        <span>
+          <strong>관리자</strong>
+          <small>신고 · 차단 · 계정 관리</small>
+        </span>
+      </a>
+      <nav class="topActions">
+        <a class="ghostBtn" href="./index.html">사이트</a>
+        <button class="themeBtn" id="themeToggle" type="button">🌙</button>
+      </nav>
+    </header>
+
+    <main>
+      <section class="adminHero">
+        <h1>관리자 페이지</h1>
+      </section>
+
+      <section class="adminGrid" id="summaryGrid"></section>
+
+      <section class="adminPanel">
+        <h2>관리자 계정 변경</h2>
+        <form class="adminForm" id="adminAccountForm">
+          <input id="adminEmail" type="email" placeholder="새 관리자 이메일" required />
+          <input id="adminCurrentPassword" type="password" placeholder="현재 비밀번호" required />
+          <input id="adminNewPassword" type="password" placeholder="새 비밀번호, 선택" />
+          <button class="primaryBtn" type="submit">변경</button>
+        </form>
+        <p class="formMessage" id="adminAccountMessage"></p>
+      </section>
+
+      <section class="adminPanel">
+        <div class="sectionHead"><h2>신고 내역</h2></div>
+        <div id="reportsArea" class="adminList"></div>
+      </section>
+
+      <section class="adminPanel">
+        <div class="sectionHead"><h2>사용자 관리</h2></div>
+        <div id="usersArea" class="adminList"></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="./js/api.js"></script>
+  <script src="./js/admin.js"></script>
+</body>
+</html>
