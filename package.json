@@ -1,7 +1,7 @@
 {
-  "name": "today-pick-pro-v4",
-  "version": "4.0.0",
-  "description": "오늘 뭐하지 - AI 자동 추천, 리뷰/별점, HTTPS, 관리자, 신고/차단",
+  "name": "todaypick",
+  "version": "12.1.0",
+  "description": "TodayPick - AI 기반 장소 추천, 리뷰, 관리자, 신고/차단",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

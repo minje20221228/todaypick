@@ -8,7 +8,18 @@ const DB_PATH = path.join(DATA_DIR, "today_pick.sqlite");
 
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
+function secureFilePermissions(filePath) {
+  try {
+    if (fs.existsSync(filePath) && process.platform !== "win32") {
+      fs.chmodSync(filePath, 0o600);
+    }
+  } catch (error) {
+    console.warn("DB 파일 권한 설정을 확인해주세요:", error.message);
+  }
+}
+
 const db = new Database(DB_PATH);
+secureFilePermissions(DB_PATH);
 db.pragma("journal_mode = WAL");
 db.pragma("foreign_keys = ON");
 
@@ -86,8 +97,30 @@ function migrate() {
       FOREIGN KEY(reporter_id) REFERENCES users(id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS login_attempts (
+      username TEXT NOT NULL,
+      ip TEXT NOT NULL,
+      failed_count INTEGER NOT NULL DEFAULT 0,
+      locked_until TEXT,
+      last_failed_at TEXT NOT NULL,
+      PRIMARY KEY(username, ip)
+    );
+
+    CREATE TABLE IF NOT EXISTS security_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      event_type TEXT NOT NULL,
+      username TEXT,
+      user_id INTEGER,
+      ip TEXT,
+      user_agent TEXT,
+      detail TEXT,
+      created_at TEXT NOT NULL
+    );
+
     CREATE INDEX IF NOT EXISTS idx_reviews_place ON reviews(place_id);
     CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status);
+    CREATE INDEX IF NOT EXISTS idx_security_events_created ON security_events(created_at);
+    CREATE INDEX IF NOT EXISTS idx_security_events_type ON security_events(event_type);
   `);
 
   if (!hasColumn("users", "username")) db.exec("ALTER TABLE users ADD COLUMN username TEXT");
@@ -105,6 +138,10 @@ function migrate() {
     CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username);
     CREATE UNIQUE INDEX IF NOT EXISTS idx_users_nickname ON users(nickname);
   `);
+
+  secureFilePermissions(DB_PATH);
+  secureFilePermissions(`${DB_PATH}-wal`);
+  secureFilePermissions(`${DB_PATH}-shm`);
 }
 
 async function seedAdmin() {

@@ -3,13 +3,13 @@
 이 프로젝트를 아래 저장소에 올리는 명령어입니다.
 
 Repository:
-https://github.com/minje20221228/today-pick
+https://github.com/minje20221228/todaypick
 
 ## 처음 올릴 때
 
 ```bash
-git clone https://github.com/minje20221228/today-pick.git
-cd today-pick
+git clone https://github.com/minje20221228/todaypick.git
+cd todaypick
 
 # 압축을 푼 프로젝트 파일을 이 폴더에 복사한 뒤
 git add .

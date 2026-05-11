@@ -17,7 +17,25 @@ const app = express();
 const PORT = Number(process.env.PORT || 3000);
 const isHttps = process.env.USE_HTTPS === "true";
 const SESSION_SECRET = process.env.SESSION_SECRET || "dev-only-change-this-secret";
+const DEFAULT_SECRET = "dev-only-change-this-secret";
+const LOGIN_LOCK_LIMIT = Number(process.env.LOGIN_LOCK_LIMIT || 5);
+const LOGIN_LOCK_MINUTES = Number(process.env.LOGIN_LOCK_MINUTES || 15);
 const SQLiteStore = SQLiteStoreFactory(session);
+const SITE_URL = (process.env.SITE_URL || "https://todaypick.com").replace(/\/+$/, "");
+const COOKIE_SECURE = process.env.COOKIE_SECURE === "auto"
+  ? "auto"
+  : process.env.COOKIE_SECURE
+    ? process.env.COOKIE_SECURE === "true"
+    : isHttps;
+const ALLOWED_ORIGINS = new Set(
+  [
+    SITE_URL,
+    ...(process.env.ALLOWED_ORIGINS || "").split(",")
+  ]
+    .map((origin) => origin.trim().replace(/\/+$/, ""))
+    .filter(Boolean)
+);
+const SHOW_DEV_EMAIL_CODE = process.env.NODE_ENV !== "production" || process.env.SHOW_DEV_EMAIL_CODE === "true";
 
 const REGIONS = [
   "서울특별시", "부산광역시", "대구광역시", "인천광역시", "광주광역시",
@@ -28,6 +46,118 @@ const REGIONS = [
 
 const CATEGORIES = ["카페", "맛집", "전시", "산책", "자연", "역사/문화", "액티비티", "야경"];
 const REPORT_REASONS = ["스팸/홍보", "부적절한 내용", "허위 정보", "욕설/비방", "기타"];
+
+function validateRuntimeSecurity() {
+  const weakSecret = !SESSION_SECRET || SESSION_SECRET === DEFAULT_SECRET || SESSION_SECRET.length < 32;
+
+  if (weakSecret && process.env.NODE_ENV === "production") {
+    throw new Error("운영 환경에서는 SESSION_SECRET을 32자 이상의 강한 랜덤 문자열로 설정해야 합니다.");
+  }
+
+  if (weakSecret) {
+    console.warn("보안 경고: .env의 SESSION_SECRET을 32자 이상의 랜덤 문자열로 변경하세요.");
+  }
+}
+
+function getClientIp(req) {
+  return req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket.remoteAddress || req.ip || "unknown";
+}
+
+function logSecurityEvent({ eventType, username, userId, req, detail }) {
+  try {
+    db.prepare(`
+      INSERT INTO security_events (event_type, username, user_id, ip, user_agent, detail, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      eventType,
+      username || null,
+      userId || null,
+      getClientIp(req),
+      String(req.get("user-agent") || "").slice(0, 300),
+      detail ? String(detail).slice(0, 500) : null,
+      new Date().toISOString()
+    );
+  } catch (error) {
+    console.warn("보안 이벤트 기록 실패:", error.message);
+  }
+}
+
+function isLoginLocked(usernameValue, req) {
+  const row = db.prepare(`
+    SELECT failed_count, locked_until
+    FROM login_attempts
+    WHERE username = ? AND ip = ?
+  `).get(usernameValue, getClientIp(req));
+
+  if (!row || !row.locked_until) return false;
+  return new Date(row.locked_until) > new Date();
+}
+
+function recordFailedLogin(usernameValue, req) {
+  const ip = getClientIp(req);
+  const now = new Date();
+  const existing = db.prepare(`
+    SELECT failed_count
+    FROM login_attempts
+    WHERE username = ? AND ip = ?
+  `).get(usernameValue, ip);
+
+  const failedCount = (existing?.failed_count || 0) + 1;
+  const lockedUntil = failedCount >= LOGIN_LOCK_LIMIT
+    ? new Date(now.getTime() + LOGIN_LOCK_MINUTES * 60 * 1000).toISOString()
+    : null;
+
+  db.prepare(`
+    INSERT INTO login_attempts (username, ip, failed_count, locked_until, last_failed_at)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(username, ip) DO UPDATE SET
+      failed_count = excluded.failed_count,
+      locked_until = excluded.locked_until,
+      last_failed_at = excluded.last_failed_at
+  `).run(usernameValue, ip, failedCount, lockedUntil, now.toISOString());
+
+  logSecurityEvent({
+    eventType: lockedUntil ? "login_locked" : "login_failed",
+    username: usernameValue,
+    req,
+    detail: `failed_count=${failedCount}`
+  });
+}
+
+function clearLoginFailures(usernameValue, req) {
+  db.prepare("DELETE FROM login_attempts WHERE username = ? AND ip = ?")
+    .run(usernameValue, getClientIp(req));
+}
+
+function isAllowedOrigin(originUrl, requestHost) {
+  if (originUrl.host === requestHost) return true;
+  return ALLOWED_ORIGINS.has(originUrl.origin);
+}
+
+function verifySameOrigin(req, res, next) {
+  if (["GET", "HEAD", "OPTIONS"].includes(req.method)) return next();
+
+  const origin = req.get("origin");
+  if (!origin) return next();
+
+  try {
+    const originUrl = new URL(origin);
+    const requestHost = req.get("host");
+
+    if (!isAllowedOrigin(originUrl, requestHost)) {
+      logSecurityEvent({
+        eventType: "blocked_cross_origin_request",
+        req,
+        detail: `origin=${origin}`
+      });
+      return res.status(403).json({ message: "허용되지 않은 출처의 요청입니다." });
+    }
+  } catch (error) {
+    return res.status(403).json({ message: "요청 출처를 확인할 수 없습니다." });
+  }
+
+  next();
+}
 
 function clean(value) { return String(value || "").trim(); }
 function email(value) { return clean(value).toLowerCase(); }
@@ -105,6 +235,10 @@ const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 30, standardHea
 const writeLimiter = rateLimit({ windowMs: 10 * 60 * 1000, limit: 40, standardHeaders: true, legacyHeaders: false, message: { message: "작성 요청이 너무 많습니다." } });
 
 app.disable("x-powered-by");
+
+if (process.env.TRUST_PROXY === "true") {
+  app.set("trust proxy", 1);
+}
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -118,19 +252,35 @@ app.use(helmet({
       formAction: ["'self'"]
     }
   },
-  crossOriginEmbedderPolicy: false
+  crossOriginEmbedderPolicy: false,
+  referrerPolicy: { policy: "strict-origin-when-cross-origin" }
 }));
 
+app.use((req, res, next) => {
+  res.setHeader("Permissions-Policy", "geolocation=(), microphone=(), camera=(), payment=()");
+  next();
+});
+
 app.use(express.json({ limit: "25kb" }));
+app.use("/api", (req, res, next) => {
+  res.setHeader("Cache-Control", "no-store");
+  next();
+});
+app.use("/api", verifySameOrigin);
 app.use(session({
   store: new SQLiteStore({ db: "sessions.sqlite", dir: path.join(__dirname, "data"), concurrentDB: true }),
   name: "today_pick_sid",
   secret: SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
-  cookie: { httpOnly: true, sameSite: "lax", secure: isHttps, maxAge: 1000 * 60 * 60 * 4 }
+  rolling: true,
+  cookie: { httpOnly: true, sameSite: "lax", secure: COOKIE_SECURE, maxAge: 1000 * 60 * 60 * 2 }
 }));
 app.use(express.static(path.join(__dirname, "public")));
+
+app.get("/api/health", (req, res) => {
+  res.json({ ok: true, siteUrl: SITE_URL });
+});
 
 app.get("/api/csrf", (req, res) => res.json({ csrfToken: makeCsrfToken(req) }));
 app.get("/api/auth/me", (req, res) => res.json({ user: getSessionUser(req) }));
@@ -182,11 +332,13 @@ app.post("/api/auth/send-email-code", authLimiter, verifyCsrf, (req, res) => {
       created_at = excluded.created_at
   `).run(cleanEmail, code, expires, new Date().toISOString());
 
-  console.log(`[개발용 이메일 인증코드] ${cleanEmail}: ${code}`);
+  if (SHOW_DEV_EMAIL_CODE) {
+    console.log(`[개발용 이메일 인증코드] ${cleanEmail}: ${code}`);
+  }
 
   res.json({
     message: "인증코드를 발송했습니다.",
-    devCode: code
+    ...(SHOW_DEV_EMAIL_CODE ? { devCode: code } : {})
   });
 });
 
@@ -250,6 +402,7 @@ app.post("/api/auth/signup", authLimiter, verifyCsrf, async (req, res) => {
     if (err) return res.status(500).json({ message: "세션 생성 중 오류가 발생했습니다." });
     req.session.user = toPublicUser(row);
     makeCsrfToken(req);
+    logSecurityEvent({ eventType: "signup_success", username: cleanUsername, userId: row.id, req });
     res.status(201).json({ user: req.session.user });
   });
 });
@@ -258,11 +411,31 @@ app.post("/api/auth/login", authLimiter, verifyCsrf, async (req, res) => {
   const cleanUsername = username(req.body.username || req.body.email);
   const password = String(req.body.password || "");
 
+  if (isLoginLocked(cleanUsername, req)) {
+    logSecurityEvent({ eventType: "login_blocked_lockout", username: cleanUsername, req });
+    return res.status(429).json({ message: `로그인 실패가 많아 잠시 잠겼습니다. ${LOGIN_LOCK_MINUTES}분 후 다시 시도해주세요.` });
+  }
+
   const row = db.prepare("SELECT id, name, username, nickname, email, password_hash, role, is_blocked FROM users WHERE username = ?").get(cleanUsername);
-  if (!row) return res.status(401).json({ message: "아이디 또는 비밀번호가 올바르지 않습니다." });
+
+  if (!row) {
+    recordFailedLogin(cleanUsername, req);
+    return res.status(401).json({ message: "아이디 또는 비밀번호가 올바르지 않습니다." });
+  }
 
   const ok = await bcrypt.compare(password, row.password_hash);
-  if (!ok) return res.status(401).json({ message: "아이디 또는 비밀번호가 올바르지 않습니다." });
+  if (!ok) {
+    recordFailedLogin(cleanUsername, req);
+    return res.status(401).json({ message: "아이디 또는 비밀번호가 올바르지 않습니다." });
+  }
+
+  if (row.is_blocked) {
+    logSecurityEvent({ eventType: "blocked_user_login_attempt", username: cleanUsername, userId: row.id, req });
+    return res.status(403).json({ message: "차단된 계정입니다. 관리자에게 문의해주세요." });
+  }
+
+  clearLoginFailures(cleanUsername, req);
+  logSecurityEvent({ eventType: "login_success", username: cleanUsername, userId: row.id, req });
 
   req.session.regenerate((err) => {
     if (err) return res.status(500).json({ message: "세션 생성 중 오류가 발생했습니다." });
@@ -273,6 +446,9 @@ app.post("/api/auth/login", authLimiter, verifyCsrf, async (req, res) => {
 });
 
 app.post("/api/auth/logout", verifyCsrf, (req, res) => {
+  const userId = req.session?.user?.id;
+  logSecurityEvent({ eventType: "logout", userId, req });
+
   req.session.destroy((err) => {
     if (err) return res.status(500).json({ message: "로그아웃 중 오류가 발생했습니다." });
     res.clearCookie("today_pick_sid");
@@ -407,6 +583,29 @@ app.get("/api/admin/summary", requireAdmin, (req, res) => {
   }});
 });
 
+
+app.get("/api/admin/security-events", requireAdmin, (req, res) => {
+  const rows = db.prepare(`
+    SELECT id, event_type, username, user_id, ip, user_agent, detail, created_at
+    FROM security_events
+    ORDER BY datetime(created_at) DESC
+    LIMIT 200
+  `).all();
+
+  res.json({
+    events: rows.map((row) => ({
+      id: row.id,
+      eventType: row.event_type,
+      username: row.username,
+      userId: row.user_id,
+      ip: row.ip,
+      userAgent: row.user_agent,
+      detail: row.detail,
+      createdAt: row.created_at
+    }))
+  });
+});
+
 app.get("/api/admin/users", requireAdmin, (req, res) => {
   const rows = db.prepare(`
     SELECT id, name, username, nickname, email, role, is_blocked, created_at
@@ -480,6 +679,7 @@ app.get("*", (req, res) => {
 });
 
 async function start() {
+  validateRuntimeSecurity();
   migrate();
   await seedAdmin();
   seedDemoPosts();
@@ -489,11 +689,11 @@ async function start() {
 
   if (isHttps && fs.existsSync(keyPath) && fs.existsSync(certPath)) {
     https.createServer({ key: fs.readFileSync(keyPath), cert: fs.readFileSync(certPath) }, app).listen(PORT, () => {
-      console.log(`HTTPS 서버 실행: https://localhost:${PORT}`);
+      console.log(`HTTPS 서버 실행: ${SITE_URL}`);
     });
   } else {
     http.createServer(app).listen(PORT, () => {
-      console.log(`HTTP 서버 실행: http://localhost:${PORT}`);
+      console.log(`HTTP 서버 실행: ${SITE_URL}`);
     });
   }
 }
