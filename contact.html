@@ -9,6 +9,7 @@
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="TodayPick" />
   <meta property="og:title" content="문의 | TodayPick" />
+  <meta property="og:description" content="TodayPick 문의, 오류 신고, 장소 수정 요청" />
   <meta property="og:url" content="https://todaypick.com/contact.html" />
   <link rel="stylesheet" href="./css/style.css" />
 </head>
@@ -34,27 +35,40 @@
     </header>
 
     <main class="staticPage">
-      
-<h1>문의</h1>
-<p>오늘 뭐하지?는 사용자 의견을 바탕으로 장소 정보와 기능을 개선합니다. 오류 신고, 장소 수정 요청, 서비스 제안은 아래 안내를 참고해주세요.</p>
+      <h1>문의</h1>
+      <p>TodayPick은 사용자 의견을 바탕으로 장소 정보와 기능을 개선합니다. 오류 신고, 장소 수정 요청, 서비스 제안, 광고 및 제휴 문의는 아래 폼으로 보내주세요.</p>
 
-<div class="contactBox">
-<strong>운영 문의</strong>
-<p>contact@example.com</p>
-</div>
+      <form class="contactForm" action="https://formspree.io/f/mqewerjl" method="POST">
+        <input type="hidden" name="_subject" value="TodayPick 문의" />
+        <label>
+          이름
+          <input name="name" type="text" autocomplete="name" placeholder="이름 또는 닉네임" required />
+        </label>
+        <label>
+          이메일
+          <input name="email" type="email" autocomplete="email" placeholder="reply@example.com" required />
+        </label>
+        <label>
+          문의 유형
+          <select name="category" required>
+            <option value="">문의 유형 선택</option>
+            <option value="place_update">장소 정보 수정 요청</option>
+            <option value="bug_report">오류 신고</option>
+            <option value="community">커뮤니티/리뷰 문의</option>
+            <option value="privacy">개인정보 관련 요청</option>
+            <option value="partnership">광고/제휴 문의</option>
+            <option value="other">기타</option>
+          </select>
+        </label>
+        <label>
+          내용
+          <textarea name="message" rows="7" placeholder="문의 내용을 자세히 적어주세요." required></textarea>
+        </label>
+        <button class="primaryBtn" type="submit">문의 보내기</button>
+      </form>
 
-<h2>문의 가능한 내용</h2>
-<ul>
-<li>장소 정보 수정 요청</li>
-<li>잘못된 링크 또는 지도 정보 신고</li>
-<li>커뮤니티 이용 관련 문의</li>
-<li>광고, 제휴, 콘텐츠 협업 문의</li>
-<li>개인정보 관련 문의</li>
-</ul>
-
-<h2>문의 전 확인해주세요</h2>
-<p>장소 운영시간, 가격, 휴무일은 실제 현장 상황에 따라 달라질 수 있습니다. 방문 전 지도 서비스나 공식 채널을 함께 확인하면 더 안전합니다.</p>
-
+      <h2>문의 전 확인해주세요</h2>
+      <p>장소 운영 시간, 가격, 예약 여부는 현장 상황에 따라 달라질 수 있습니다. 방문 직전에는 공식 채널이나 지도 서비스에서 최신 정보를 함께 확인해주세요.</p>
     </main>
 
     <footer class="siteFooter">

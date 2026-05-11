@@ -1,38 +1,19 @@
-# 오늘 뭐하지 Pro v4
+# TodayPick
 
-요청 반영 버전입니다.
+TodayPick은 지역, 동행 유형, 분위기, 예산을 기준으로 오늘 갈 만한 장소를 추천하는 웹 서비스입니다. 리뷰, 커뮤니티 추천글, 신고/차단, 관리자 대시보드, 보안 이벤트 기록을 포함합니다.
 
-## 반영 기능
+## 주요 기능
 
-- 오늘의 추천 자동 추천 기능
-- AI 자동 추천 기반 추가
-  - 외부 API 없이 작동하는 점수 기반 추천 엔진
-  - 시간대, 동행, 분위기, 예산, 실내/야외 조건을 점수화
-  - 추후 실제 OpenAI API로 교체하기 쉽게 `runAiRecommendation()`으로 분리
-- 장소 리뷰/별점 누적 기능
-  - 장소별 리뷰 작성
-  - 평균 별점/리뷰 수 표시
-  - 로그인 사용자만 리뷰 작성
-- 초보자용 메인 화면 단순화
-  - 오늘의 추천
-  - 데이트
-  - 혼자 힐링
-  - 친구랑 놀기
-  - 상세 필터는 접기/펼치기
-- 이미지 SVG 삭제
-  - SVG 로고/이미지 파일 제거
-  - 카드 이미지는 이모지 + 그라데이션 썸네일
-  - 사진은 Google 이미지 검색 버튼으로 연결
-- Google 이미지 검색 버튼
-- Google Maps 약도 보기 / 길찾기 버튼
-- 개인정보 수집 동의 제거
-- 이메일 인증 유지
-  - 개발용 인증코드는 화면에 표시됩니다.
-- HTTPS 기본 실행
-- 관리자 이메일/비밀번호 변경
-- 신고/차단/관리자 페이지 유지
+- 지역별 장소 추천
+- AI 질문 기반 추천 흐름
+- 장소 상세 정보: 추천 시간, 혼잡도, 비 오는 날 대체 코스, 예상 소요 시간
+- 장소 리뷰와 별점
+- 커뮤니티 추천글, 신고, 관리자 검토
+- 관리자 계정 변경, 사용자 차단, 보안 이벤트 확인
+- AdSense 연결 스크립트와 `ads.txt` 자동 제공
+- `robots.txt`, `sitemap.xml`, canonical/OG 메타 태그
 
-## 실행
+## 로컬 실행
 
 ```bash
 npm install
@@ -40,18 +21,10 @@ cp .env.example .env
 npm start
 ```
 
-Windows에서는 `.env.example`을 복사해서 `.env`로 이름을 바꾸면 됩니다.
-
-접속:
+접속 주소:
 
 ```txt
-https://todaypick.com
-```
-
-관리자:
-
-```txt
-https://todaypick.com/admin.html
+https://localhost:3000
 ```
 
 기본 관리자 계정:
@@ -61,142 +34,78 @@ admin@example.com
 Admin1234!
 ```
 
-## 참고
+## 운영 환경 변수
 
-로컬 HTTPS는 자체 서명 인증서라 브라우저 경고가 뜰 수 있습니다.  
-실제 배포는 Cloudflare, Render, Railway, AWS, Nginx 등에서 HTTPS 인증서를 적용하는 방식이 좋습니다.
-
-
-## v6 변경 사항
-
-- 첫 화면에 지역 선택 UI 추가
-- AI 추천을 3단계 질문 방식으로 변경
-  1. 누구랑 가나요?
-  2. 어떤 분위기가 좋아요?
-  3. 예산은?
-- 선택한 지역 안에서 AI 추천 결과 제공
-- 장소 상세페이지에 추천 방문 시간, 혼잡도, 추천 상황 표시
-
-
-## v7 변경 사항
-
-- 로그인 방식을 이메일/비밀번호에서 아이디/비밀번호로 변경
-- 회원가입 입력 항목 변경
-  - 아이디
-  - 비밀번호
-  - 이메일
-  - 닉네임
-- 아이디, 이메일, 닉네임 중복 확인 API 추가
-- 회원가입 중 닉네임이 중복이면 "닉네임 중복입니다." 메시지 표시
-- AdSense 심사 대비 사이트 구조 보완
-  - 소개 페이지
-  - 이용 가이드
-  - 개인정보처리방침
-  - 이용약관
-  - 문의 페이지
-  - 푸터 내비게이션
-- 빈 페이지를 줄이고, 사용자에게 필요한 안내 콘텐츠를 추가
-
-
-## v8 변경 사항
-
-- 이메일 중복 확인 UI/API 제거
-- 이메일은 회원가입 중 인증코드 방식으로 변경
-- 아이디/닉네임 중복 확인은 유지
-- 회원가입 흐름:
-  1. 아이디 입력
-  2. 이메일 입력 후 인증 버튼 클릭
-  3. 인증코드 입력
-  4. 닉네임/비밀번호 입력
-  5. 회원가입
-- 개발용 인증코드는 화면과 서버 콘솔에 표시됩니다.
-- 실제 배포 시 SMTP/메일 API 연동이 필요합니다.
-
-
-## v9 변경 사항
-
-- 회원가입 화면에서 이메일 인증코드 입력칸을 처음에는 숨김 처리
-- 이메일 입력 후 [인증] 버튼을 눌렀을 때 인증코드 입력칸이 나타나도록 변경
-- 이메일 주소를 수정하면 기존 인증코드 입력칸을 다시 숨기고 재인증 안내 표시
-
-
-## v10 변경 사항
-
-- 장소 상세 콘텐츠를 고품질 콘텐츠형 페이지로 확장
-  - 이 장소가 좋은 이유
-  - 근처 추천 코스
-  - 비 오는 날 대체 코스
-  - 혼자 갈 때 팁
-  - 데이트로 갈 때 팁
-  - 예상 소요 시간
-  - 주의할 점
-- 소개/가이드/개인정보처리방침/이용약관/문의 페이지 강화
-- 모바일 UX 개선
-  - 버튼 터치 영역 확대
-  - 카드 간격 개선
-  - 상세페이지 가독성 개선
-- 광고 배치 영역 정리
-  - 추천 카드 중간
-  - 상세페이지 하단
-  - 콘텐츠를 가리지 않는 위치에 광고 영역 배치
-- 사이트가 기능형 웹앱보다 사람이 직접 정리한 지역 추천 콘텐츠처럼 보이도록 구성 개선
-
-
-## v11 DB/보안 강화 사항
-
-- SQL 인젝션 방어
-  - 모든 DB 접근은 better-sqlite3의 prepared statement / parameter binding 사용
-- 로그인 공격 방어
-  - 같은 아이디 + IP 기준 로그인 실패 5회 시 15분 잠금
-  - 실패/잠금/성공 로그인 이벤트 기록
-- 세션 보안
-  - 로그인 성공 시 세션 재생성
-  - httpOnly 쿠키 사용
-  - HTTPS 사용 시 secure 쿠키 사용
-  - 세션 유지 시간 2시간
-  - rolling session 적용
-- CSRF/출처 검증
-  - CSRF 토큰 검증 유지
-  - 상태 변경 요청에 Origin 검사 추가
-- DB 파일 보호
-  - SQLite DB 파일 권한을 가능한 경우 600으로 설정
-  - public 폴더 밖 data 디렉터리에 DB 저장
-- 운영 환경 실수 방지
-  - production에서 약한 SESSION_SECRET 사용 시 서버 시작 차단
-  - API 응답 no-store 캐시 헤더 적용
-  - Permissions-Policy / Referrer-Policy 적용
-- 관리자 보안 로그
-  - 관리자 페이지에서 최근 보안 이벤트 확인 가능
-
-## 배포 전 보안 체크리스트
-
-- `.env`의 SESSION_SECRET을 32자 이상 랜덤 문자열로 변경
-- 실제 서버에서는 HTTPS 적용
-- `NODE_ENV=production` 설정
-- DB 파일과 `.env`가 public 경로에 들어가지 않았는지 확인
-- 정기 백업과 로그 모니터링 설정
-- 이메일 인증은 개발용 코드 표시 대신 SMTP/SendGrid/AWS SES 등 실제 메일 발송으로 변경
-
-
-## v12 변경 사항
-
-- 추천 카드를 지역 가이드북형 카드로 변경
-- SVG/이모지 썸네일 중심 구조 제거
-- 카드 상단을 지역명, 카테고리, 장소명, 에디터 요약 중심으로 재구성
-- 추천 시간, 혼잡도, 추천 상황을 카드 안에서 바로 확인 가능
-- 사이트에 어울리는 자동 개선으로 EDITOR PICK 배지 추가
-
-## todaypick.com 배포 설정
-
-`.env`에서 운영 도메인을 아래처럼 맞춥니다.
+운영 배포 전 `.env` 또는 배포 플랫폼 환경 변수에 아래 값을 설정하세요.
 
 ```txt
+NODE_ENV=production
 SITE_URL=https://todaypick.com
 ALLOWED_ORIGINS=https://todaypick.com,https://www.todaypick.com
-NODE_ENV=production
+USE_HTTPS=false
 TRUST_PROXY=true
 COOKIE_SECURE=auto
 SHOW_DEV_EMAIL_CODE=false
+SESSION_SECRET=32자_이상의_랜덤_문자열
+
+ADMIN_EMAIL=운영자_이메일
+ADMIN_PASSWORD=강한_관리자_비밀번호
+ADMIN_NAME=관리자
+ADMIN_ID=admin
+ADMIN_NICKNAME=운영자
+
+ADSENSE_CLIENT_ID=ca-pub-0000000000000000
+ADSENSE_DIRECT_ACCOUNT=DIRECT
 ```
 
-프록시나 배포 플랫폼에서 HTTPS를 종료하는 경우 `TRUST_PROXY=true`를 유지하고, 실제 서비스에서는 `SESSION_SECRET`을 32자 이상의 랜덤 문자열로 바꿔야 합니다.
+`ADSENSE_CLIENT_ID`를 비워두면 AdSense 스크립트와 `/ads.txt`가 활성화되지 않습니다. 실제 AdSense 계정에서 발급받은 `ca-pub-...` 값을 넣으면 주요 공개 페이지의 `<head>`에 연결 스크립트가 자동 삽입되고, `/ads.txt`는 아래 형식으로 응답합니다.
+
+```txt
+google.com, pub-0000000000000000, DIRECT, f08c47fec0942fa0
+```
+
+## AdSense 승인 준비
+
+- `todaypick.com`이 실제 배포 페이지로 열려야 합니다.
+- `about.html`, `guide.html`, `privacy.html`, `terms.html`, `contact.html`이 공개되어 있어야 합니다.
+- `contact@todaypick.com` 메일을 실제 수신 가능한 주소로 연결하세요.
+- 빈 광고 자리나 클릭 유도 문구를 노출하지 마세요.
+- AdSense에서 사이트를 추가한 뒤 발급받은 Publisher ID를 `ADSENSE_CLIENT_ID`에 설정하세요.
+- 배포 후 `https://todaypick.com/ads.txt`가 200 OK로 열리는지 확인하세요.
+
+## Render 배포
+
+이 저장소에는 `render.yaml`이 포함되어 있습니다.
+
+1. GitHub 저장소 `https://github.com/minje20221228/todaypick`에 코드를 올립니다.
+2. Render에서 New Web Service 또는 Blueprint를 선택합니다.
+3. 저장소를 연결하고 `render.yaml` 설정을 사용합니다.
+4. 환경 변수 `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADSENSE_CLIENT_ID`를 추가합니다.
+5. Render에서 발급한 기본 주소로 동작을 확인합니다.
+6. todaypick.com DNS를 Render 안내에 따라 연결하고 HTTPS 발급을 완료합니다.
+
+직접 설정할 경우:
+
+```txt
+Build Command: npm install
+Start Command: npm start
+Health Check Path: /api/health
+```
+
+## 배포 후 확인
+
+```txt
+https://todaypick.com/
+https://todaypick.com/api/health
+https://todaypick.com/robots.txt
+https://todaypick.com/sitemap.xml
+https://todaypick.com/ads.txt
+https://todaypick.com/admin.html
+```
+
+## 보안 메모
+
+- production에서는 약한 `SESSION_SECRET` 사용 시 서버가 시작되지 않습니다.
+- `.env`, SQLite DB, 세션 DB는 public 경로에 두지 않습니다.
+- 운영 환경에서는 `SHOW_DEV_EMAIL_CODE=false`를 유지합니다.
+- HTTPS를 프록시나 배포 플랫폼에서 종료하면 `TRUST_PROXY=true`, `COOKIE_SECURE=auto`를 사용합니다.

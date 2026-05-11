@@ -36,6 +36,8 @@ const ALLOWED_ORIGINS = new Set(
     .filter(Boolean)
 );
 const SHOW_DEV_EMAIL_CODE = process.env.NODE_ENV !== "production" || process.env.SHOW_DEV_EMAIL_CODE === "true";
+const ADSENSE_CLIENT_ID = String(process.env.ADSENSE_CLIENT_ID || "").trim();
+const ADSENSE_DIRECT_ACCOUNT = String(process.env.ADSENSE_DIRECT_ACCOUNT || "DIRECT").trim() || "DIRECT";
 
 const REGIONS = [
   "서울특별시", "부산광역시", "대구광역시", "인천광역시", "광주광역시",
@@ -239,19 +241,28 @@ app.disable("x-powered-by");
 if (process.env.TRUST_PROXY === "true") {
   app.set("trust proxy", 1);
 }
+
+const cspDirectives = {
+  defaultSrc: ["'self'"],
+  scriptSrc: ["'self'"],
+  styleSrc: ["'self'"],
+  imgSrc: ["'self'", "data:"],
+  connectSrc: ["'self'"],
+  objectSrc: ["'none'"],
+  baseUri: ["'self'"],
+  formAction: ["'self'"],
+  frameSrc: ["'self'"]
+};
+
+if (isValidAdsenseClientId(ADSENSE_CLIENT_ID)) {
+  cspDirectives.scriptSrc.push("https://pagead2.googlesyndication.com");
+  cspDirectives.imgSrc.push("https://*.googlesyndication.com", "https://*.googleusercontent.com");
+  cspDirectives.connectSrc.push("https://pagead2.googlesyndication.com", "https://googleads.g.doubleclick.net");
+  cspDirectives.frameSrc.push("https://googleads.g.doubleclick.net", "https://tpc.googlesyndication.com");
+}
+
 app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
-      styleSrc: ["'self'"],
-      imgSrc: ["'self'", "data:"],
-      connectSrc: ["'self'"],
-      objectSrc: ["'none'"],
-      baseUri: ["'self'"],
-      formAction: ["'self'"]
-    }
-  },
+  contentSecurityPolicy: { directives: cspDirectives },
   crossOriginEmbedderPolicy: false,
   referrerPolicy: { policy: "strict-origin-when-cross-origin" }
 }));
@@ -267,6 +278,16 @@ app.use("/api", (req, res, next) => {
   next();
 });
 app.use("/api", verifySameOrigin);
+
+function isValidAdsenseClientId(value) {
+  return /^ca-pub-\d{16}$/.test(value);
+}
+
+function adsenseHeadSnippet() {
+  if (!isValidAdsenseClientId(ADSENSE_CLIENT_ID)) return "";
+  return `<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT_ID}" crossorigin="anonymous"></script>`;
+}
+
 app.use(session({
   store: new SQLiteStore({ db: "sessions.sqlite", dir: path.join(__dirname, "data"), concurrentDB: true }),
   name: "today_pick_sid",
@@ -276,6 +297,29 @@ app.use(session({
   rolling: true,
   cookie: { httpOnly: true, sameSite: "lax", secure: COOKIE_SECURE, maxAge: 1000 * 60 * 60 * 2 }
 }));
+
+app.get("/ads.txt", (req, res) => {
+  if (!isValidAdsenseClientId(ADSENSE_CLIENT_ID)) {
+    return res.status(404).type("text/plain").send("AdSense publisher ID is not configured.\n");
+  }
+
+  const publisherId = ADSENSE_CLIENT_ID.replace("ca-", "");
+  res.type("text/plain").send(`google.com, ${publisherId}, ${ADSENSE_DIRECT_ACCOUNT}, f08c47fec0942fa0\n`);
+});
+
+app.get(["/", "/index.html", "/about.html", "/guide.html", "/privacy.html", "/terms.html", "/contact.html"], (req, res, next) => {
+  const fileName = req.path === "/" ? "index.html" : req.path.slice(1);
+  const filePath = path.join(__dirname, "public", fileName);
+
+  fs.readFile(filePath, "utf8", (error, html) => {
+    if (error) return next();
+
+    const snippet = adsenseHeadSnippet();
+    const withSnippet = snippet ? html.replace("</head>", `  ${snippet}\n</head>`) : html;
+    res.type("html").send(withSnippet);
+  });
+});
+
 app.use(express.static(path.join(__dirname, "public")));
 
 app.get("/api/health", (req, res) => {

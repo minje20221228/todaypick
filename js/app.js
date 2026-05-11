@@ -401,21 +401,6 @@ function isEditorPick(place) {
 }
 
 
-function createAdSlot(label = "광고 영역") {
-  const slot = document.createElement("aside");
-  slot.className = "adSlot";
-  slot.setAttribute("aria-label", label);
-
-  const small = document.createElement("small");
-  small.textContent = "AD SPACE";
-
-  const text = document.createElement("p");
-  text.textContent = "승인 후 콘텐츠를 방해하지 않는 위치에 광고 코드를 삽입하세요.";
-
-  slot.append(small, text);
-  return slot;
-}
-
 function createPlaceCard(place) {
   const card = document.createElement("article");
   card.className = "placeCard guideBookCard";
@@ -507,9 +492,6 @@ function createPlaceCard(place) {
 function renderCards() {
   const places = getFilteredPlaces();
   const cardNodes = places.map(createPlaceCard);
-  if (places.length >= 9) {
-    cardNodes.splice(6, 0, createAdSlot("추천 장소 사이 광고 영역"));
-  }
   el.cardsArea.replaceChildren(...cardNodes);
   el.resultCount.textContent = `${places.length}개`;
   el.emptyState.classList.toggle("hidden", places.length !== 0);
@@ -625,9 +607,7 @@ function showDetail(id) {
     createButton("리뷰 보기", "ghostBtn", () => openReviewModal(place.id))
   );
 
-  const detailAd = createAdSlot("상세페이지 하단 광고 영역");
-
-  body.append(h2, meta, intro, whyTitle, whyList, courseTitle, course, tipGrid, durationBox, actions, detailAd);
+  body.append(h2, meta, intro, whyTitle, whyList, courseTitle, course, tipGrid, durationBox, actions);
   card.append(banner, body);
   el.detailPage.replaceChildren(back, card);
   el.listPage.classList.add("hidden");

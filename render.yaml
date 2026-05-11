@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: todaypick
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SITE_URL
+        value: https://todaypick.com
+      - key: ALLOWED_ORIGINS
+        value: https://todaypick.com,https://www.todaypick.com
+      - key: USE_HTTPS
+        value: "false"
+      - key: TRUST_PROXY
+        value: "true"
+      - key: COOKIE_SECURE
+        value: auto
+      - key: SHOW_DEV_EMAIL_CODE
+        value: "false"
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: ADSENSE_CLIENT_ID
+        sync: false
