@@ -363,6 +363,44 @@ function createButton(text, className, onClick) {
   return btn;
 }
 
+function getRegionGuideLabel(region) {
+  const map = {
+    "서울특별시": "SEOUL",
+    "부산광역시": "BUSAN",
+    "대구광역시": "DAEGU",
+    "인천광역시": "INCHEON",
+    "광주광역시": "GWANGJU",
+    "대전광역시": "DAEJEON",
+    "울산광역시": "ULSAN",
+    "세종특별자치시": "SEJONG",
+    "경기도": "GYEONGGI",
+    "강원특별자치도": "GANGWON",
+    "충청북도": "CHUNGBUK",
+    "충청남도": "CHUNGNAM",
+    "전북특별자치도": "JEONBUK",
+    "전라남도": "JEONNAM",
+    "경상북도": "GYEONGBUK",
+    "경상남도": "GYEONGNAM",
+    "제주특별자치도": "JEJU"
+  };
+
+  return map[region] || "TODAY";
+}
+
+function getGuideSummary(place) {
+  if (place.editorIntro) {
+    const firstSentence = place.editorIntro.split(".")[0];
+    return firstSentence ? `${firstSentence}.` : place.shortDesc;
+  }
+
+  return place.shortDesc || `${place.region}에서 가볍게 방문하기 좋은 장소입니다.`;
+}
+
+function isEditorPick(place) {
+  return ["카페", "전시", "자연", "야경"].includes(place.category) && ["감성", "힐링", "문화생활"].includes(place.mood);
+}
+
+
 function createAdSlot(label = "광고 영역") {
   const slot = document.createElement("aside");
   slot.className = "adSlot";
@@ -380,45 +418,72 @@ function createAdSlot(label = "광고 영역") {
 
 function createPlaceCard(place) {
   const card = document.createElement("article");
-  card.className = "placeCard";
+  card.className = "placeCard guideBookCard";
 
-  const thumb = document.createElement("div");
-  thumb.className = "thumb";
-  thumb.style.background = place.gradient;
+  const cover = document.createElement("div");
+  cover.className = "guideCover";
 
-  const emoji = document.createElement("span");
-  emoji.className = "emoji";
-  emoji.textContent = place.emoji;
+  const coverTop = document.createElement("div");
+  coverTop.className = "guideCoverTop";
 
-  const badge = document.createElement("span");
-  badge.className = "badge";
-  badge.textContent = place.category;
+  const regionLabel = document.createElement("span");
+  regionLabel.className = "guideRegion";
+  regionLabel.textContent = getRegionGuideLabel(place.region);
 
-  thumb.append(emoji, badge);
+  const category = document.createElement("span");
+  category.className = "guideCategory";
+  category.textContent = place.category;
+
+  coverTop.append(regionLabel, category);
+
+  const coverTitle = document.createElement("div");
+  coverTitle.className = "guideCoverTitle";
+
+  const city = document.createElement("small");
+  city.textContent = `${place.region} · ${place.city}`;
+
+  const name = document.createElement("h3");
+  name.textContent = place.name;
+
+  const summary = document.createElement("p");
+  summary.textContent = getGuideSummary(place);
+
+  coverTitle.append(city, name, summary);
+  cover.append(coverTop, coverTitle);
 
   const body = document.createElement("div");
-  body.className = "cardBody";
+  body.className = "cardBody guideBody";
 
-  const titleRow = document.createElement("div");
-  titleRow.className = "cardTitle";
+  const badgeRow = document.createElement("div");
+  badgeRow.className = "guideBadgeRow";
 
-  const titleWrap = document.createElement("div");
-  const title = document.createElement("h3");
-  title.textContent = place.name;
-  const rating = document.createElement("small");
-  rating.className = "ratingLine";
+  if (isEditorPick(place)) {
+    const pick = document.createElement("span");
+    pick.className = "editorPickBadge";
+    pick.textContent = "EDITOR PICK";
+    badgeRow.append(pick);
+  }
+
+  const rating = document.createElement("span");
+  rating.className = "guideRating";
   rating.textContent = ratingText(place.id);
-  titleWrap.append(title, rating);
-
-  const heart = createButton(isFavorite(place.id) ? "♥" : "♡", `heartBtn ${isFavorite(place.id) ? "active" : ""}`, () => toggleFavorite(place.id));
-  titleRow.append(titleWrap, heart);
+  badgeRow.append(rating);
 
   const meta = document.createElement("div");
-  meta.className = "meta compactMeta";
-  [`📍 ${place.region}`, `⏰ ${place.bestVisitTime}`, `👥 ${place.companions.join(", ")}`].forEach((text) => {
+  meta.className = "guideMeta";
+
+  [
+    ["추천 시간", place.bestVisitTime],
+    ["혼잡도", place.crowdLevel],
+    ["추천 상황", place.recommendSituation]
+  ].forEach(([label, value]) => {
+    const row = document.createElement("div");
+    const strong = document.createElement("strong");
+    strong.textContent = label;
     const span = document.createElement("span");
-    span.textContent = text;
-    meta.append(span);
+    span.textContent = value;
+    row.append(strong, span);
+    meta.append(row);
   });
 
   const chips = document.createElement("div");
@@ -426,18 +491,16 @@ function createPlaceCard(place) {
   chips.append(...place.tags.slice(0, 3).map(makeChip));
 
   const actions = document.createElement("div");
-  actions.className = "cardActions grid3";
+  actions.className = "cardActions guideActions";
   actions.append(
-    createButton("상세", "primaryBtn", () => showDetail(place.id)),
-    createButton("리뷰", "ghostBtn", () => openReviewModal(place.id)),
-    createButton("사진", "ghostBtn", () => window.open(googleImageUrl(place), "_blank", "noopener,noreferrer")),
-    createButton("약도", "ghostBtn", () => window.open(googleMapUrl(place), "_blank", "noopener,noreferrer")),
+    createButton("상세 보기", "primaryBtn", () => showDetail(place.id)),
     createButton("길찾기", "ghostBtn", () => window.open(googleDirectionsUrl(place), "_blank", "noopener,noreferrer")),
+    createButton("리뷰", "ghostBtn", () => openReviewModal(place.id)),
     createButton(isFavorite(place.id) ? "찜해제" : "찜", "ghostBtn", () => toggleFavorite(place.id))
   );
 
-  body.append(titleRow, meta, chips, actions);
-  card.append(thumb, body);
+  body.append(badgeRow, meta, chips, actions);
+  card.append(cover, body);
   return card;
 }
 
@@ -677,7 +740,9 @@ async function sendEmailCode() {
     renderAuthMode();
     el.emailCodeInput.focus();
     el.authMessage.style.color = "var(--success)";
-    el.authMessage.textContent = `인증코드를 입력해주세요. 개발용 인증코드: ${result.devCode}`;
+    el.authMessage.textContent = result.devCode
+      ? `인증코드를 입력해주세요. 개발용 인증코드: ${result.devCode}`
+      : "인증코드를 입력해주세요.";
   } catch (error) {
     state.emailCodeVisible = false;
     renderAuthMode();

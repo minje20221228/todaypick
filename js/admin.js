@@ -9,6 +9,7 @@ const adminEl = {
   summaryGrid: document.querySelector("#summaryGrid"),
   usersArea: document.querySelector("#usersArea"),
   reportsArea: document.querySelector("#reportsArea"),
+  securityEventsArea: document.querySelector("#securityEventsArea"),
   adminAccountForm: document.querySelector("#adminAccountForm"),
   adminEmail: document.querySelector("#adminEmail"),
   adminCurrentPassword: document.querySelector("#adminCurrentPassword"),
@@ -37,6 +38,24 @@ function card(title, value) {
   strong.textContent = value;
   item.append(small, strong);
   return item;
+}
+
+function showPanelError(target, message) {
+  target.textContent = "";
+  const row = document.createElement("article");
+  row.className = "adminRow";
+  row.style.borderColor = "var(--danger)";
+  row.style.color = "var(--danger)";
+  row.textContent = message;
+  target.append(row);
+}
+
+async function loadAdminSection(target, loader, label) {
+  try {
+    await loader();
+  } catch (error) {
+    showPanelError(target, `${label}을 불러오지 못했습니다. ${error.message}`);
+  }
 }
 
 async function loadSummary() {
@@ -156,6 +175,55 @@ async function handleAdminAccount(event) {
   }
 }
 
+
+async function loadSecurityEvents() {
+  const result = await api.adminSecurityEvents();
+  renderSecurityEvents(result.events || []);
+}
+
+function renderSecurityEvents(events) {
+  if (!events.length) {
+    adminEl.securityEventsArea.textContent = "보안 이벤트가 없습니다.";
+    return;
+  }
+
+  adminEl.securityEventsArea.replaceChildren(...events.map((event) => {
+    const row = document.createElement("article");
+    row.className = "adminRow securityEventRow";
+
+    const info = document.createElement("div");
+    const title = document.createElement("strong");
+    title.textContent = `${event.eventType} · ${event.username || "unknown"}`;
+
+    const meta = document.createElement("small");
+    meta.textContent = `${event.ip || "-"} · ${new Date(event.createdAt).toLocaleString("ko-KR")}`;
+
+    const detail = document.createElement("p");
+    detail.textContent = event.detail || event.userAgent || "";
+
+    info.append(title, meta, detail);
+    row.append(info);
+    return row;
+  }));
+}
+
+async function loadDashboard() {
+  await Promise.all([
+    loadAdminSection(adminEl.summaryGrid, loadSummary, "요약"),
+    loadAdminSection(adminEl.reportsArea, loadReports, "신고 내역"),
+    loadAdminSection(adminEl.usersArea, loadUsers, "사용자 목록"),
+    loadAdminSection(adminEl.securityEventsArea, loadSecurityEvents, "보안 이벤트")
+  ]);
+}
+
+function showAdminUnavailable(message) {
+  showPanelError(adminEl.summaryGrid, message);
+  showPanelError(adminEl.reportsArea, message);
+  showPanelError(adminEl.usersArea, message);
+  showPanelError(adminEl.securityEventsArea, message);
+}
+
+
 async function initAdmin() {
   applyAdminTheme();
   adminEl.themeToggle.addEventListener("click", toggleAdminTheme);
@@ -163,6 +231,12 @@ async function initAdmin() {
 
   try {
     await api.init();
+  } catch (error) {
+    showAdminUnavailable(error.message);
+    return;
+  }
+
+  try {
     const me = await api.me();
     if (!me.user || me.user.role !== "admin") {
       alert("관리자 로그인이 필요합니다.");
@@ -173,9 +247,7 @@ async function initAdmin() {
     adminState.user = me.user;
     adminEl.adminEmail.value = me.user.email;
 
-    await loadSummary();
-    await loadReports();
-    await loadUsers();
+    await loadDashboard();
   } catch (error) {
     alert(error.message);
     location.href = "./index.html";
